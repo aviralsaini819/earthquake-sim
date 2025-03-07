@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earthquake Simulation Map</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; display: flex; height: 100vh; }
+        
+        /* Fullscreen Map on Left */
+        #map-container {
+            width: 70%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.1s ease-in-out;
+        }
+        
+        /* Right Panel */
+        #controls {
+            width: 30%;
+            background: #333;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        input, button, select {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            width: 80%;
+        }
+        #damage-info {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            width: 80%;
+            text-align: center;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+    <!-- Fullscreen Map on Left -->
+    <div id="map-container">
+        <div id="map"></div>
+    </div>
+    
+    <!-- Right Panel -->
+    <div id="controls">
+        <h2>Earthquake Simulation</h2>
+        <input type="text" id="city-input" placeholder="Enter a city">
+        <button onclick="searchCity()">Search</button>
+        
+        <p>Select Earthquake Magnitude:</p>
+        <select id="magnitude">
+            <option value="3">3.0 - Minor</option>
+            <option value="4">4.0 - Light</option>
+            <option value="5">5.0 - Moderate</option>
+            <option value="6">6.0 - Strong</option>
+            <option value="7">7.0 - Major</option>
+            <option value="8">8.0 - Severe</option>
+            <option value="9">9.0 - Catastrophic</option>
+        </select>
+        
+        <button onclick="simulateEarthquake()">Make a Quake</button>
+        
+        <p id="coordinates">Latitude: -, Longitude: -</p>
+        
+        <div id="damage-info">
+            <strong>Destruction Report</strong><br>
+            Financial Damage: $0<br>
+            Building Damage: 0%<br>
+            Lives Lost: 0
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map = L.map('map').setView([20.5937, 78.9629], 4);
+        let earthquakeCircles = [];
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a> contributors',
+            subdomains: 'abcd'
+        }).addTo(map);
+
+        let marker = L.marker([20.5937, 78.9629], { draggable: true }).addTo(map);
+
+        marker.on('dragend', function () {
+            let lat = marker.getLatLng().lat.toFixed(6);
+            let lng = marker.getLatLng().lng.toFixed(6);
+            document.getElementById("coordinates").innerText = `Latitude: ${lat}, Longitude: ${lng}`;
+        });
+
+        function searchCity() {
+            const city = document.getElementById("city-input").value.trim();
+            if (!city) {
+                alert("Please enter a city name.");
+                return;
+            }
+
+            fetch("/geocode", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ city: city })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.lat && data.lng) {
+                    map.setView([data.lat, data.lng], 10);
+                    marker.setLatLng([data.lat, data.lng]);
+                    document.getElementById("coordinates").innerText = `Latitude: ${data.lat}, Longitude: ${data.lng}`;
+                } else {
+                    alert("City not found.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+
+        function simulateEarthquake() {
+            let magnitude = document.getElementById("magnitude").value;
+            let lat = marker.getLatLng().lat;
+            let lng = marker.getLatLng().lng;
+
+            earthquakeCircles.forEach(circle => map.removeLayer(circle));
+            earthquakeCircles = [];
+
+            let impactZones = {
+                3: { high: 5, moderate: 20, light: 50 },
+                4: { high: 15, moderate: 50, light: 100 },
+                5: { high: 30, moderate: 100, light: 200 },
+                6: { high: 50, moderate: 150, light: 250 },
+                7: { high: 80, moderate: 200, light: 350 },
+                8: { high: 100, moderate: 250, light: 400 },
+                9: { high: 150, moderate: 300, light: 500 }
+            }[magnitude];
+
+            let levels = [
+                { radius: impactZones.high, color: 'red', fillOpacity: 0.6 },
+                { radius: impactZones.moderate, color: 'orange', fillOpacity: 0.4 },
+                { radius: impactZones.light, color: 'yellow', fillOpacity: 0.2 }
+            ];
+
+            levels.forEach(level => {
+                let circle = L.circle([lat, lng], {
+                    color: level.color,
+                    fillColor: level.color,
+                    fillOpacity: level.fillOpacity,
+                    radius: level.radius * 1000
+                }).addTo(map);
+                earthquakeCircles.push(circle);
+            });
+
+            document.getElementById("damage-info").innerHTML = `
+                <strong>Destruction Report</strong><br>
+                Financial Damage: $${(magnitude * 10 + Math.random() * 50).toFixed(2)} billion<br>
+                Building Damage: ${(magnitude * 5 + Math.random() * 10).toFixed(1)}%<br>
+                Lives Lost: ${Math.floor(Math.pow(magnitude, 3) + Math.random() * 50)}
+            `;
+
+            let shakeCount = 0;
+            let shakeInterval = setInterval(() => {
+                document.getElementById("map").style.transform = `translate(${Math.random() * 10 - 5}px, ${Math.random() * 10 - 5}px)`;
+                shakeCount++;
+                if (shakeCount > 20) {
+                    clearInterval(shakeInterval);
+                    document.getElementById("map").style.transform = "translate(0, 0)";
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>
