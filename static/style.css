@@ -1,0 +1,102 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; display: flex; height: 100vh; }
+
+/* Fullscreen Map on Desktop */
+#map-container {
+    width: 70%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+#map {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.1s ease-in-out;
+}
+
+/* Right Panel */
+#controls {
+    width: 30%;
+    background: #333;
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+input, button, select {
+    margin-top: 10px;
+    padding: 10px;
+    font-size: 16px;
+    width: 80%;
+}
+#damage-info {
+    margin-top: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 5px;
+    width: 80%;
+    text-align: center;
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+    }
+
+    #map-container {
+        width: 100%;
+        height: 60vh; /* Map takes 75% */
+    }
+
+    #controls {
+        width: 100%;
+        height: 40vh; /* Controls take 25% */
+        overflow-y: auto; /* Scrollable controls */
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px;
+    }
+
+    #damage-info {
+        display: none; /* Hides Destruction Report on mobile */
+    }
+
+    input, button, select {
+        width: 100%;
+        padding: 8px 12px;
+        box-sizing: border-box;
+    }
+}
+@media (max-width: 768px) {
+    #damage-info {
+        position: absolute;    /* Positioning the panel on top of the map */
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.7);  /* Dark transparent background */
+        color: #fff;
+        padding: 5px 8px;
+        border-radius: 8px;
+        font-size: 10px;
+        max-width: 150px;  /* Compact size for mobile */
+        z-index: 999;  /* Ensures it stays above the map */
+        text-align: left;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);  /* Slight shadow for depth */
+        display: block;  /* Ensures visibility on mobile */
+    }
+
+    #controls {
+        width: 100%;
+        height: 40vh; 
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px;
+    }
+}
